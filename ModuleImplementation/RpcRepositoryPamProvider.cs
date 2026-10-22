@@ -55,7 +55,7 @@ public class RpcRepositoryPamProvider : PamProviderBase, IDisposable {
 			this.logger.LogInformation(
 				$$"""
 				* UserName: '{{this.userName}}'
-				* Tenants: '{{this.options.Tenant}}'
+				* Tenants: '{{String.Join(" | ", this.options.Tenants)}}'
 				* Process: '{{processName}}'
 				* TTY: '{{ttyName}}'
 				* OS: '{{osName}}'
@@ -96,7 +96,7 @@ public class RpcRepositoryPamProvider : PamProviderBase, IDisposable {
 // TODO: The server should not require 2FA if the client don't support it (Plasma Login, SDDM, Gnome etc.).
 		PamAuthenticateReply grpcReply = client.PamClient.PamAuthenticate(
 			new PamAuthenticateRequest {
-				Tenants = { this.options.Tenant },
+				Tenants = { this.options.Tenants },
 				UserIdentifier = this.userName,
 				UserPassword1 = String.Empty,
 				UserPassword2 = String.Empty,
@@ -147,7 +147,7 @@ public class RpcRepositoryPamProvider : PamProviderBase, IDisposable {
 				UserIdentifier = this.userName,
 				UserPassword1 = userPassword1,
 				UserPassword2 = userPassword2,
-				Tenants = { this.options.Tenant },
+				Tenants = { this.options.Tenants },
 				ModuleVersion = versionName,
 				ProcessName = processName,
 				ServiceName = serviceName,
@@ -377,7 +377,7 @@ Boolean requierePassword2 = false;
 		// Perform the change authentication token through gRPC.
 		PamChAuthTokReply grpcReply = client.PamClient.PamChAuthTok(
 			new PamChAuthTokRequest {
-				Tenants = { this.options.Tenant },
+				Tenants = { this.options.Tenants },
 				UserIdentifier = this.userName,
 				UserPassword1 = oldUserPassword1,
 				UserPassword2 = oldUserPassword2,
