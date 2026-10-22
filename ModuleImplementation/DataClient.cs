@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -14,8 +13,7 @@ namespace RpcScandinavia.Repository.PamNss;
 /// The gRPC client perform requests and return data as module data transfer objects.
 /// </summary>
 public class DataClient : IDisposable {
-	private readonly String[] tenants;
-	private readonly CallOptions callOptions;
+	private readonly Configuration options;
 	private readonly GrpcChannel grpcChannel;
 	private readonly PamChannel.PamChannelClient pamChannel;
 	private readonly NssChannel.NssChannelClient nssChannel;
@@ -29,48 +27,37 @@ public class DataClient : IDisposable {
 	/// </summary>
 	/// <param name="tenants">The tenants.</param>
 	/// <param name="host">The RPC Repository server.</param>
-	/// <param name="certificate">The TLS certificate used by the server.</param>
-	/// <param name="maximumRetries">The maximum times a request is retried.</param>
-	/// <param name="maximumRetryBackoffMilliseconds">The initial backoff that determine when the next retry attempt is made.</param>
-	public DataClient(String[] tenants, Uri host, X509Certificate2 certificate, Int32 maximumRetries = 3, Int32 maximumRetryBackoffMilliseconds = 50) : this(null, tenants, host, certificate, maximumRetries, maximumRetryBackoffMilliseconds) {
+	/// <param name="options">The configuration.</param>
+	public DataClient(Configuration options) : this(null, options) {
 	} // DataClient
 
 	/// <summary>
 	/// Instantiates a new gRPC client.
 	/// </summary>
 	/// <param name="logger">The optional logger.</param>
-	/// <param name="tenants">The tenants.</param>
-	/// <param name="host">The RPC Repository server.</param>
-	/// <param name="certificate">The TLS certificate used by the server.</param>
-	/// <param name="maximumRetries">The maximum times a request is retried.</param>
-	/// <param name="maximumRetryBackoffMilliseconds">The initial backoff that determine when the next retry attempt is made.</param>
-	public DataClient(ILogger logger, String[] tenants, Uri host, X509Certificate2 certificate, Int32 maximumRetries = 3, Int32 maximumRetryBackoffMilliseconds = 50) {
+	/// <param name="options">The configuration.</param>
+	public DataClient(ILogger logger, Configuration options) {
+		this.options = options;
+
 		// Validate.
-		ArgumentNullException.ThrowIfNull(tenants);
-		ArgumentNullException.ThrowIfNull(host);
+		ArgumentNullException.ThrowIfNull(options);
 
 		// Initialise gRPC.
 		SocketsHttpHandler handler = new SocketsHttpHandler();
 		handler.SslOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
 		handler.EnableMultipleHttp2Connections = false;
 		handler.PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan;
-		handler.ConnectTimeout = TimeSpan.FromSeconds(2);
-
-		// Send an HTTP/2 ping frame if the connection is idle for 30 seconds.
-		handler.KeepAlivePingDelay = TimeSpan.FromSeconds(30);
-
-		// Wait up to 5 seconds for the server to acknowledge the ping.
-		handler.KeepAlivePingTimeout = TimeSpan.FromSeconds(5);
-
-		// Send pings even if there are no active streams/requests on the connection.
+		handler.ConnectTimeout = this.options.DataClientConnectTimeout;
+		handler.KeepAlivePingDelay = this.options.DataClientKeepAlivePingDelay;
+		handler.KeepAlivePingTimeout = this.options.DataClientKeepAlivePingTimeout;
 		handler.KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always;
 
 		MethodConfig methodConfig = new MethodConfig {
 			Names = { MethodName.Default },
 			RetryPolicy = new RetryPolicy {
-				MaxAttempts = 3,
-				InitialBackoff = TimeSpan.FromMilliseconds(maximumRetryBackoffMilliseconds),
-				MaxBackoff = TimeSpan.FromMilliseconds(maximumRetryBackoffMilliseconds),
+				MaxAttempts = this.options.DataClientMaxAttempts,
+				InitialBackoff = this.options.DataClientBackoffMilliseconds,
+				MaxBackoff = this.options.DataClientBackoffMilliseconds,
 				BackoffMultiplier = 1.0,
 				RetryableStatusCodes = { StatusCode.Unavailable },
 			},
@@ -88,9 +75,7 @@ public class DataClient : IDisposable {
 		grpcOptions.MaxReceiveMessageSize = 500 * 1024 * 1024;											// 500 MB.
 		grpcOptions.MaxSendMessageSize = 500 * 1024 * 1024;												// 500 MB.
 
-		this.tenants = tenants;
-		this.callOptions = new CallOptions(deadline: DateTime.UtcNow.AddMilliseconds(2000));
-		this.grpcChannel = GrpcChannel.ForAddress(host, grpcOptions);
+		this.grpcChannel = GrpcChannel.ForAddress(options.GetHostAndPort, grpcOptions);
 		this.pamChannel = new PamChannel.PamChannelClient(grpcChannel);
 		this.nssChannel = new NssChannel.NssChannelClient(grpcChannel);
 	} // DataClient
@@ -107,6 +92,15 @@ public class DataClient : IDisposable {
 	//------------------------------------------------------------------------------------------------------------------
 	// Properties.
 	//------------------------------------------------------------------------------------------------------------------
+	/// <summary>
+	/// Gets the call options.
+	/// </summary>
+	public CallOptions CallOptions {
+		get {
+			return new CallOptions(deadline: DateTime.UtcNow.AddMilliseconds(this.options.DataClientCallDeadlineMilliseconds));
+		}
+	} // CallOptions
+
 	/// <summary>
 	/// Gets the PAM gRPC client.
 	/// </summary>
@@ -141,9 +135,9 @@ public class DataClient : IDisposable {
 		// Query the server.
 		using AsyncServerStreamingCall<NssUserResponse> grpcReply = this.nssChannel.GetAllUsers(
 			new NssAllRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Return the users.
@@ -159,10 +153,10 @@ public class DataClient : IDisposable {
 		// Query the server.
 		NssUserResponse grpcReply = this.nssChannel.GetUserByUid(
 			new NssUidRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 				LinuxUserId = userId,
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Handle failure.
@@ -178,10 +172,10 @@ public class DataClient : IDisposable {
 		// Query the server.
 		NssUserResponse grpcReply = this.nssChannel.GetUserByName(
 			new NssUserRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 				LinuxUserName = userName,
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Handle failure.
@@ -197,10 +191,10 @@ public class DataClient : IDisposable {
 		// Query the server.
 		NssUserMembershipsResponse grpcReply = this.nssChannel.GetUserMembershipsByName(
 			new NssUserMembershipRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 				LinuxUserName = userName,
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Handle failure.
@@ -217,9 +211,9 @@ public class DataClient : IDisposable {
 		// Query the server.
 		using AsyncServerStreamingCall<NssUserResponse> grpcReply = this.nssChannel.GetAllUsers(
 			new NssAllRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Return the shadows.
@@ -236,10 +230,10 @@ public class DataClient : IDisposable {
 		// Query the server.
 		NssUserResponse grpcReply = this.nssChannel.GetUserByName(
 			new NssUserRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 				LinuxUserName = userName,
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Handle failure.
@@ -255,9 +249,9 @@ public class DataClient : IDisposable {
 		// Query the server.
 		using AsyncServerStreamingCall<NssGroupResponse> grpcReply = this.nssChannel.GetAllGroups(
 			new NssAllRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Return the groups.
@@ -273,10 +267,10 @@ public class DataClient : IDisposable {
 		// Query the server.
 		NssGroupResponse grpcReply = this.nssChannel.GetGroupByGid(
 			new NssGidRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 				LinuxGroupId = groupId,
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Handle failure.
@@ -292,10 +286,10 @@ public class DataClient : IDisposable {
 		// Query the server.
 		NssGroupResponse grpcReply = this.nssChannel.GetGroupByName(
 			new NssGroupRequest {
-				Tenants = { this.tenants },
+				Tenants = { this.options.Tenants },
 				LinuxGroupName = groupName,
 			},
-			 this.callOptions
+			 this.CallOptions
 		);
 
 		// Handle failure.

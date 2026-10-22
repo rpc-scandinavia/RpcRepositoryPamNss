@@ -187,7 +187,7 @@ public class PamProviderBase : ProviderBase, IDisposable {
 	/// </summary>
 	public PamStatus pam_sm_chauthtok() {
 		// The wrapper handles exceptions and trace logging.
-		return this.Wrap(PamStatus.PAM_USER_UNKNOWN, "chauthtok", () => {
+		return this.Wrap(PamStatus.PAM_AUTHTOK_ERR, "chauthtok", () => {
 			// Return the result from the virtual method.
 			return this.ChangePassword();
 		});
@@ -292,8 +292,8 @@ public class PamProviderBase : ProviderBase, IDisposable {
 			PamStatus funcReturn = func();
 
 			// Log.
-			if (this.logger.IsEnabled(LogLevel.Debug) == true) {
-				this.logger.LogDebug($"End => {funcReturn}");
+			if (this.logger.IsEnabled(LogLevel.Information) == true) {
+				this.logger.LogInformation($"End => {funcReturn}");
 			}
 
 			// Return.

@@ -701,8 +701,8 @@ public class NssProviderBase : ProviderBase, IDisposable {
 			NssStatus funcReturn = func(out debugString);
 
 			// Log.
-			if (this.logger.IsEnabled(LogLevel.Debug) == true) {
-				this.logger.LogDebug($"End => {funcReturn}: {debugString}");
+			if (this.logger.IsEnabled(LogLevel.Information) == true) {
+				this.logger.LogInformation($"End => {funcReturn}: {debugString}");
 			}
 
 			// Return.

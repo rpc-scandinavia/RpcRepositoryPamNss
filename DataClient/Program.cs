@@ -1,5 +1,4 @@
 using System;
-using RpcScandinavia.Repository.PamNss;
 namespace RpcScandinavia.Repository.PamNss.Internal;
 
 /// <summary>
@@ -29,13 +28,7 @@ internal static class Program {
 			Console.Error.WriteLine($"Begin process: {Environment.ProcessId}. Configuration: '{options.Host}:{options.Port}'. Arguments: {String.Join(" ", args)}");
 
 			// Initialise gRPC.
-			using DataClient client = new DataClient(
-				[options.Tenant],
-				options.GetHostAndPort,
-				options.Certificate,
-				3,
-				50
-			);
+			using DataClient client = new DataClient(options);
 
 			// Process request.
 			String reply = null;

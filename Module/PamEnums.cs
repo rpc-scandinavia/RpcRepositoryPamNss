@@ -5,37 +5,164 @@ namespace RpcScandinavia.Repository.PamNss;
 /// PAM status codes.
 /// </summary>
 public enum PamStatus {
+	/// <summary>
+	/// Success.
+	/// </summary>
 	PAM_SUCCESS = 0,
+
+	/// <summary>
+	/// dlopen() failure when loading a module.
+	/// </summary>
 	PAM_OPEN_ERR = 1,
+
+	/// <summary>
+	/// Symbol not found in module.
+	/// </summary>
 	PAM_SYMBOL_ERR = 2,
+
+	/// <summary>
+	/// Error in service module.
+	/// </summary>
 	PAM_SERVICE_ERR = 3,
+
+	/// <summary>
+	/// System error.
+	/// </summary>
 	PAM_SYSTEM_ERR = 4,
+
+	/// <summary>
+	/// Memory buffer error.
+	/// </summary>
 	PAM_BUF_ERR = 5,
+
+	/// <summary>
+	/// Permission denied.
+	/// </summary>
 	PAM_PERM_DENIED = 6,
+
+	/// <summary>
+	/// Authentication failure.
+	/// </summary>
 	PAM_AUTH_ERR = 7,
+
+	/// <summary>
+	/// Can not make credentials sufficient.
+	/// </summary>
 	PAM_CRED_INSUFFICIENT = 8,
+
+	/// <summary>
+	/// Underlying authentication service cannot be retrieved.
+	/// </summary>
 	PAM_AUTHINFO_UNAVAIL = 9,
+
+	/// <summary>
+	/// User not known to the underlying authentication module.
+	/// </summary>
 	PAM_USER_UNKNOWN = 10,
+
+	/// <summary>
+	/// Have exhausted maximum number of tries.
+	/// </summary>
 	PAM_MAXTRIES = 11,
+
+	/// <summary>
+	/// Token expired; new authentication token required.
+	/// </summary>
 	PAM_NEW_AUTHTOK_REQD = 12,
+
+	/// <summary>
+	/// User account has expired.
+	/// </summary>
 	PAM_ACCT_EXPIRED = 13,
+
+	/// <summary>
+	/// Cannot establish/maintain the user session.
+	/// </summary>
 	PAM_SESSION_ERR = 14,
+
+	/// <summary>
+	/// Insufficient credentials to access authentication data.
+	/// </summary>
 	PAM_CRED_UNAVAIL = 15,
+
+	/// <summary>
+	/// Credentials expired.
+	/// </summary>
 	PAM_CRED_EXPIRED = 16,
+
+	/// <summary>
+	/// Failure setting user credentials.
+	/// </summary>
 	PAM_CRED_ERR = 17,
+
+	/// <summary>
+	/// No module-specific data is present.
+	/// </summary>
 	PAM_NO_MODULE_DATA = 18,
+
+	/// <summary>
+	/// Conversation error.
+	/// </summary>
 	PAM_CONV_ERR = 19,
+
+	/// <summary>
+	/// Authentication token manipulation error.
+	/// </summary>
 	PAM_AUTHTOK_ERR = 20,
+
+	/// <summary>
+	/// Authentication information recovery error.
+	/// </summary>
 	PAM_AUTHTOK_RECOVERY_ERR = 21,
+
+	/// <summary>
+	/// Authentication token lock busy.
+	/// </summary>
 	PAM_AUTHTOK_LOCK_BUSY = 22,
+
+	/// <summary>
+	/// Authentication token aging disabled.
+	/// </summary>
 	PAM_AUTHTOK_DISABLE_AGING = 23,
+
+	/// <summary>
+	/// Preliminary check by module failed.
+	/// </summary>
 	PAM_TRY_AGAIN = 24,
+
+	/// <summary>
+	/// Ignore underlying module/account check.
+	/// </summary>
 	PAM_IGNORE = 25,
+
+	/// <summary>
+	/// Critical error detected / aborting module.
+	/// </summary>
 	PAM_ABORT = 26,
+
+	/// <summary>
+	/// New authentication token expired.
+	/// </summary>
 	PAM_AUTHTOK_EXPIRED = 27,
+
+	/// <summary>
+	/// Module is unknown.
+	/// </summary>
 	PAM_MODULE_UNKNOWN = 28,
+
+	/// <summary>
+	/// Bad item passed to a pam function.
+	/// </summary>
 	PAM_BAD_ITEM = 29,
+
+	/// <summary>
+	/// Conversation function needs to be called again.
+	/// </summary>
 	PAM_CONV_AGAIN = 30,
+
+	/// <summary>
+	/// Application has to call a PAM function again.
+	/// </summary>
 	PAM_INCOMPLETE = 31,
 } // PamStatus
 
@@ -144,14 +271,49 @@ public enum PamItemType {
 /// </summary>
 [Flags]
 public enum PamFlags {
+	/// <summary>
+	/// Disallow authentication with a null authentication token.
+	/// </summary>
 	PAM_DISALLOW_NULL_AUTHTOK = 0x0001,
+
+	/// <summary>
+	/// Establish user credentials.
+	/// </summary>
 	PAM_ESTABLISH_CRED = 0x0002,
+
+	/// <summary>
+	/// Delete user credentials.
+	/// </summary>
 	PAM_DELETE_CRED = 0x0004,
+
+	/// <summary>
+	/// Reinitialize user credentials.
+	/// </summary>
 	PAM_REINITIALIZE_CRED = 0x0008,
+
+	/// <summary>
+	/// Refresh user credentials.
+	/// </summary>
 	PAM_REFRESH_CRED = 0x0010,
+
+	/// <summary>
+	/// Change expired authentication token.
+	/// </summary>
 	PAM_CHANGE_EXPIRED_AUTHTOK = 0x0020,
+
+	/// <summary>
+	/// Update authentication token.
+	/// </summary>
 	PAM_UPDATE_AUTHTOK = 0x2000,
+
+	/// <summary>
+	/// Perform preliminary check.
+	/// </summary>
 	PAM_PRELIM_CHECK = 0x4000,
+
+	/// <summary>
+	/// Be quiet; do not emit messages or prompt the user.
+	/// </summary>
 	PAM_SILENT = 0x8000,
 } // PamFlags
 

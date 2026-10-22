@@ -23,7 +23,7 @@ public static class TestData {
 			5001,
 			2001,
 			"rpc@rpc-scandinavia.dk",
-			"René Paw Christensen TEST",
+			"René Paw Christensen",
 			"/home/rpc@rpc-scandinavia.dk",
 			"/bin/zsh",
 			DateTimeOffset.UtcNow.AddDays(7)

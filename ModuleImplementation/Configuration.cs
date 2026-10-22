@@ -22,46 +22,52 @@ log = info
 ignore_passwd = true
 ignore_group = true
 
-pam_retries = 3
-//pam_cache_enabled = false
-//pam_cache_2fa_risk_enabled = false
-//pam_cache_ttl_seconds = 900
-//pam_cache_path = /var/cache/rpc-repository/pam.db
-
-nss_retries = 1
-//nss_cache_enabled = false
-//nss_cache_ttl_seconds = 86400
-//nss_cache_path = /var/cache/rpc-repository/nss.db
+dataclient = /usr/lib/rpc-scandinavia/rpc-repository/RpcRepositoryPamNssDataClient
+dataclient_max_attempts = 3
 */
 /// <summary>
 /// The module configuration, read from the configuration file.
 /// The configuration file is formatted as lines with "name = value", and comments using "#".
 /// </summary>
 public class Configuration {
+	// Non-configurable options.
+	public readonly String DataClientMarkerKey = "RPC_REPOSITORY_NSS_DATA_CLIENT";
+	public readonly String DataClientMarkerValue = "1";
+	public readonly Int32 DataClientCallDeadlineMilliseconds = 5000;
+	public readonly TimeSpan DataClientBackoffMilliseconds = TimeSpan.FromMilliseconds(100);
+	public readonly TimeSpan DataClientConnectTimeout = TimeSpan.FromSeconds(2);
+	public readonly TimeSpan DataClientKeepAlivePingDelay = TimeSpan.FromSeconds(30);			// Send an HTTP/2 ping frame if the connection is idle for 30 seconds.
+	public readonly TimeSpan DataClientKeepAlivePingTimeout = TimeSpan.FromSeconds(5);			// Wait up to 5 seconds for the server to acknowledge the ping.
+
+	// Configuration keys.
 	private const String KeyHost = "host";
 	private const String KeyPort = "port";
 	private const String KeyCertificateFile = "certificate_file";
 	private const String KeyCertificateCommonName = "certificate_common_name";
-	private const String KeyTenant = "tenant";
+	private const String KeyTenants = "tenant";
 	private const String KeyUpdateFile = "update_file";
 	private const String KeyUpdatePamFile = "update_pam_file";
 	private const String KeyUpdateNssFile = "update_nss_file";
 	private const String KeyLogLevel = "log";
 	private const String KeyIgnorePasswd = "ignore_passwd";
 	private const String KeyIgnoreGroup = "ignore_group";
-	private const String KeyPamRetries = "pam_retries";
-	private const String KeyNssRetries = "nss_retries";
+	private const String KeyDataClient = "dataclient";
+	private const String KeyDataClientMaxAttempts = "dataclient_max_attempts";
 
+	// Default configuration values.
 	private static FileInfo DefaultConfigurationFile = new FileInfo("/etc/rpc-repository/rpc-repository.conf");
 	private static Int32 DefaultPort = 50051;
 	private static FileInfo DefaultCertificateFile = new FileInfo("/etc/rpc-repository/rpc-repository.cer");
 	private static String DefaultCertificateCommonName = "rpc-repository";
-	private static String DefaultTenant = "test";
+	private static String[] DefaultTenants = ["test"];
 	private static FileInfo DefaultUpdateFile = new FileInfo("/tmp/rpc-repository.so");
 	private static FileInfo DefaultUpdatePamFile = new FileInfo("/tmp/rpc_pam-test.so");
 	private static FileInfo DefaultUpdateNssFile = new FileInfo("/tmp/rpc_libnss_pam-test.so");
 	private static LogLevel DefaultLogLevel = LogLevel.Information;
+	private static FileInfo DefaultDataClientFile = new FileInfo("/usr/lib/rpc-scandinavia/rpc-repository/RpcRepositoryPamNssDataClient");
+	private static Int32 DefaultDataClientMaxAttempts = 3;
 
+	// Loaded configuration keys and values.
 	private readonly Dictionary<String, String> options;
 
 	#region Methods
@@ -117,6 +123,27 @@ public class Configuration {
 			}
 		}
 	} // Load
+
+	/// <summary>
+	/// Write the configuration to the log.
+	/// </summary>
+	/// <param name="options">The configuration.</param>
+	public override String ToString() {
+		return
+			$$"""
+			RPC Repository PAM/NSS Module Configuration:
+			* Host: '{{this.Host}}'
+			* Port: '{{this.Port}}'
+			* Certificate file: '{{this.CertificateFile.FullName}}'
+			* Certificate Common Name: '{{this.CertificateCommonName}}'
+			* Tenants identifier: '{{this.Tenants}}'
+			* Log level: '{{this.LogLevel}}'
+			* Ignore local users: '{{this.IgnoreLocalUsers}}'
+			* Ignore local groups: '{{this.IgnoreLocalGroups}}'
+			* DataClient executable: '{{this.DataClient}}'
+			* DataClient max. attempts: '{{this.DataClientMaxAttempts}}'
+			""";
+	} // ToString
 	#endregion
 
 	#region Properties
@@ -128,7 +155,8 @@ public class Configuration {
 	/// </summary>
 	public IPAddress Host {
 		get {
-			if (IPAddress.TryParse(this.options[Configuration.KeyHost], out IPAddress address) == true) {
+			if ((this.options.TryGetValue(Configuration.KeyHost, out String value) == true) &&
+				(IPAddress.TryParse(value, out IPAddress address) == true)) {
 				return address;
 			} else {
 				return IPAddress.None;
@@ -141,7 +169,10 @@ public class Configuration {
 	/// </summary>
 	public Int32 Port {
 		get {
-			if ((Int32.TryParse(this.options[Configuration.KeyPort], out Int32 port) == true) && (port > 1000) && (port < 65536)) {
+			if ((this.options.TryGetValue(Configuration.KeyPort, out String value) == true) &&
+				(Int32.TryParse(value, out Int32 port) == true) &&
+				(port > 1000) &&
+				(port < 65536)) {
 				return port;
 			} else {
 				return Configuration.DefaultPort;
@@ -156,9 +187,9 @@ public class Configuration {
 		get {
 			try {
 				if (this.Host.AddressFamily == AddressFamily.InterNetworkV6) {
-					return new Uri($"https://[{this.options[Configuration.KeyHost]}]:{this.options[Configuration.KeyPort]}");
+					return new Uri($"https://[{this.Host}]:{this.Port}");
 				} else {
-					return new Uri($"https://{this.options[Configuration.KeyHost]}:{this.options[Configuration.KeyPort]}");
+					return new Uri($"https://{this.Host}:{this.Port}");
 				}
 			} catch {
 				return null;
@@ -197,18 +228,26 @@ public class Configuration {
 	/// </summary>
 	public String CertificateCommonName {
 		get {
-			return this.options[Configuration.KeyCertificateCommonName] ?? Configuration.DefaultCertificateCommonName;
+			if (this.options.TryGetValue(Configuration.KeyCertificateCommonName, out String value) == true) {
+				return value;
+			} else {
+				return Configuration.DefaultCertificateCommonName;
+			}
 		}
 	} // CertificateCommonName
 
 	/// <summary>
-	/// Gets the tenant identifier.
+	/// Gets the tenant identifiers.
 	/// </summary>
-	public String Tenant {
+	public String[] Tenants {
 		get {
-			return this.options[Configuration.KeyTenant] ?? Configuration.DefaultTenant;
+			if (this.options.TryGetValue(Configuration.KeyTenants, out String value) == true) {
+				return [value];
+			} else {
+				return Configuration.DefaultTenants;
+			}
 		}
-	} // Tenant
+	} // Tenants
 
 	/// <summary>
 	/// Gets the update file.
@@ -256,14 +295,18 @@ public class Configuration {
 	/// </summary>
 	public LogLevel LogLevel {
 		get {
-			return this.options[Configuration.KeyLogLevel] switch {
-				("info" or "information") => LogLevel.Information,
-				("warn" or "warning") => LogLevel.Warning,
-				("error") => LogLevel.Error,
-				("debug") => LogLevel.Debug,
-				("trace") => LogLevel.Trace,
-				_ => Configuration.DefaultLogLevel,
-			};
+			if (this.options.TryGetValue(Configuration.KeyLogLevel, out String value) == true) {
+				return value switch {
+					("info" or "information") => LogLevel.Information,
+					("warn" or "warning") => LogLevel.Warning,
+					("error") => LogLevel.Error,
+					("debug") => LogLevel.Debug,
+					("trace") => LogLevel.Trace,
+					_ => Configuration.DefaultLogLevel,
+				};
+			} else {
+				return Configuration.DefaultLogLevel;
+			}
 		}
 	} // LogLevel
 
@@ -272,7 +315,8 @@ public class Configuration {
 	/// </summary>
 	public Boolean IgnoreLocalUsers {
 		get {
-			if (Boolean.TryParse(this.options[Configuration.KeyIgnorePasswd], out Boolean ignore) == true) {
+			if ((this.options.TryGetValue(Configuration.KeyIgnorePasswd, out String value) == true) &&
+				(Boolean.TryParse(value, out Boolean ignore) == true)) {
 				return ignore;
 			} else {
 				return true;
@@ -285,7 +329,8 @@ public class Configuration {
 	/// </summary>
 	public Boolean IgnoreLocalGroups {
 		get {
-			if (Boolean.TryParse(this.options[Configuration.KeyIgnoreGroup], out Boolean ignore) == true) {
+			if ((this.options.TryGetValue(Configuration.KeyIgnoreGroup, out String value) == true) &&
+				(Boolean.TryParse(value, out Boolean ignore) == true)) {
 				return ignore;
 			} else {
 				return true;
@@ -294,30 +339,32 @@ public class Configuration {
 	} // IgnoreLocalGroups
 
 	/// <summary>
-	/// Gets the number of times PAM requests are retried.
+	/// Gets the full path to the data client executable (helper that perform gRPC communication in forked processes).
 	/// </summary>
-	public Int32 PamRetries {
+	public FileInfo DataClient {
 		get {
-			if (Int32.TryParse(this.options[Configuration.KeyPamRetries], out Int32 retries) == true) {
-				return retries;
-			} else {
-				return 3;
+			try {
+				return new FileInfo(this.options[Configuration.KeyDataClient]);
+			} catch {
+				return Configuration.DefaultDataClientFile;
 			}
 		}
-	} // PamRetries
+	} // DataClient
 
 	/// <summary>
-	/// Gets the number of times NSS requests are retried.
+	/// Gets the maximum number of times the data client retry gRPC calls.
 	/// </summary>
-	public Int32 NssRetries {
+	public Int32 DataClientMaxAttempts {
 		get {
-			if (Int32.TryParse(this.options[Configuration.KeyNssRetries], out Int32 retries) == true) {
+			if ((this.options.TryGetValue(Configuration.KeyDataClientMaxAttempts, out String value) == true) &&
+				(Int32.TryParse(value, out Int32 retries) == true) &&
+				(retries > -1)) {
 				return retries;
 			} else {
-				return 1;
+				return Configuration.DefaultDataClientMaxAttempts;
 			}
 		}
-	} // NssRetries
+	} // DataClientMaxAttempts
 	#endregion
 
 } // Configuration

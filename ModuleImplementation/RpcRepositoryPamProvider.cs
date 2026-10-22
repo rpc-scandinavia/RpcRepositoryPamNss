@@ -36,7 +36,7 @@ public class RpcRepositoryPamProvider : PamProviderBase, IDisposable {
 		// Log the configuration.
 		// This is only done when authenticating, to limit the logging.
 		if (this.logger.IsEnabled(LogLevel.Information) == true) {
-			this.LogConfiguration(this.options);
+			this.logger.LogInformation(options.ToString());
 		}
 
 		// Get service name and tty name from PAM.
@@ -55,7 +55,7 @@ public class RpcRepositoryPamProvider : PamProviderBase, IDisposable {
 			this.logger.LogInformation(
 				$$"""
 				* UserName: '{{this.userName}}'
-				* Tenant: '{{this.options.Tenant}}'
+				* Tenants: '{{this.options.Tenant}}'
 				* Process: '{{processName}}'
 				* TTY: '{{ttyName}}'
 				* OS: '{{osName}}'
@@ -89,7 +89,7 @@ public class RpcRepositoryPamProvider : PamProviderBase, IDisposable {
 		}
 
 		// Get the gRPC client.
-		using DataClient client = new DataClient(this.logger, [this.options.Tenant], this.options.GetHostAndPort, this.options.Certificate, this.options.PamRetries, 250);
+		using DataClient client = new DataClient(this.logger, this.options);
 
 		// Perform a dummy authentication, to get information about 2FA.
 // TODO: Add API to server, that can validate a user and return whether 2FA is required for login.
@@ -297,7 +297,7 @@ public class RpcRepositoryPamProvider : PamProviderBase, IDisposable {
 		}
 
 		// Get the gRPC client.
-		using DataClient client = new DataClient(this.logger, [this.options.Tenant], this.options.GetHostAndPort, this.options.Certificate, this.options.PamRetries, 250);
+		using DataClient client = new DataClient(this.logger, this.options);
 
 		// Perform preliminary server availability check if requested.
 		if (this.HasPreliminaryCheckFlag == true) {
@@ -407,27 +407,5 @@ Boolean requierePassword2 = false;
 		// Return.
 		return PamStatus.PAM_SUCCESS;
 	} // ChangePassword
-
-	/// <summary>
-	/// Write the configuration to the log.
-	/// </summary>
-	/// <param name="options">The configuration.</param>
-	private void LogConfiguration(Configuration options) {
-		this.logger.LogInformation(
-			$$"""
-			RPC Repository PAM/NSS Module Configuration:
-			* Host: '{{options.Host}}'
-			* Port: '{{options.Port}}'
-			* Certificate_file: '{{options.CertificateFile.FullName}}'
-			* Certificate_common_name: '{{options.CertificateCommonName}}'
-			* Tenant identifier: '{{options.Tenant}}'
-			* Log level: '{{options.LogLevel}}'
-			* Ignore local users: '{{options.IgnoreLocalUsers}}'
-			* Ignore local groups: '{{options.IgnoreLocalGroups}}'
-			* PAM retries: '{{options.PamRetries}}'
-			* NSS retries: '{{options.NssRetries}}'
-			"""
-		);
-	} // LogConfiguration
 
 } // RpcRepositoryPamProvider

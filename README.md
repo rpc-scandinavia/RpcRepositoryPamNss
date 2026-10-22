@@ -17,7 +17,7 @@ Note that the native library, is only build when you publish.
 
 ## Hello World
 
-A "hello world" style implementation with static data, are included in `TestPamProvider.cs` and `TestNssProvider.cs` 
+A "hello world" style implementation with static data, is included in `TestPamProvider.cs` and `TestNssProvider.cs` 
 and `TestData.cs`.
 
 ## Design
@@ -125,7 +125,7 @@ Verify that the exports are without version numbers. This is fixed in the projec
 replace for the version numbers in the `module.exports` file.
 
 Also verify that the name of the module file is part of the NSS exports, that is the module file as it is installed 
-on the system, and not as it is build. You man rename it afterwards.
+on the system, and not as it is build. You can rename it afterwards.
 
 ```text
 000000000012b0c0 T _nss_rpc-repository_endgrent
