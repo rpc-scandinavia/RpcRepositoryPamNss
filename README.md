@@ -11,7 +11,9 @@ Everything is designed, so you can copy the project and just implement your busi
    * `NssProviderClass` the name of your NSS class.
    * `NssServiceName` the name of your published native AOT library **.so** file.
 5) Remove my references to gRPC in the project configuration. 
-6) Publish with `dotnet  publish  --runtime "linux-x64"  --configuration "Release"  "RpcRepositoryPamNss.csproj"`
+6) Publish with `dotnet  publish  --runtime "linux-x64"  --configuration "Release"  "RpcRepositoryPamNss.csproj"`, 
+and the data client with `dotnet  publish  --runtime "linux-x64"  --configuration "Release"  
+"RpcRepositoryPamNssDataClient.csproj"`
 
 Note that the native library, is only build when you publish.
 
