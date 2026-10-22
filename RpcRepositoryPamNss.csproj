@@ -109,7 +109,7 @@
 
 		<Copy
 			SourceFiles="$(PublishDir)$(ProjectName).so"
-			DestinationFiles="/data/setup/linux/bincs.extensions/sources/rpc-repository-pam-nss-TEST/usr/lib/rpc-scandinavia/rpc-repository/$(ProjectName).so"
+			DestinationFiles="/data/setup/linux/bincs.extensions/sources/rpc-repository-pam-nss/usr/lib/rpc-scandinavia/rpc-repository/$(ProjectName).so"
 		/>
     </Target>
 

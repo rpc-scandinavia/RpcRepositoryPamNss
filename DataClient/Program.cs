@@ -1,4 +1,5 @@
 using System;
+using RpcScandinavia.Repository.PamNss;
 namespace RpcScandinavia.Repository.PamNss.Internal;
 
 /// <summary>

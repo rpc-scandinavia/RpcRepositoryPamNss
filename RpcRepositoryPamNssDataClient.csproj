@@ -32,6 +32,8 @@
 		<Content Remove="**" />
 		<Compile Remove="**" />
 		<Compile Include="DataClient/**" />
+		<Compile Include="Module\NssDataTransportObjects.cs" />
+		<Compile Include="Module\NssEnums.cs" />
 		<Compile Include="Module\NssStructs.cs" />
 		<Compile Include="Module/NssException.cs" />
 		<Compile Include="ModuleImplementation/Configuration.cs" />
@@ -73,7 +75,7 @@
 		-->
 		<Copy
 			SourceFiles="$(PublishDir)$(ProjectName)"
-			DestinationFiles="/data/setup/linux/bincs.extensions/sources/rpc-repository-pam-nss-TEST/usr/lib/rpc-scandinavia/rpc-repository/$(ProjectName)"
+			DestinationFiles="/data/setup/linux/bincs.extensions/sources/rpc-repository-pam-nss/usr/lib/rpc-scandinavia/rpc-repository/$(ProjectName)"
 		/>
     </Target>
 
