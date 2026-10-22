@@ -178,6 +178,43 @@ On some Debian based systems, you can enable/disable PAM modules with this comma
 /usr/sbin/pam-auth-update
 ```
 
+Create the Debian PAM template in `/usr/share/pam-configs/rpc-repository`:
+
+```
+Name: RPC Repository
+Default: yes
+Priority: 512
+Auth-Type: Primary
+Auth:
+	sufficient	RpcRepositoryPamNss
+Account-Type: Primary
+Account:
+	sufficient	RpcRepositoryPamNss
+Password-Type: Primary
+Password:
+	sufficient	RpcRepositoryPamNss
+Session-Type: Additional
+Session:
+	optional	RpcRepositoryPamNss
+```
+
+### Module file name
+
+Remember that NSS require the module file name to be like "libnss_RpcRepositoryPamNss.so.2". PAM don't require any 
+special file name, what you might observe is a naming convention.
+I personally save the module and data client in under `/usr/lib/rpc-scandinavia` and then create symbolic links like 
+this:
+
+```bash
+# KDE Linux: 
+sudo  ln  --symbolic  --relative  --force  "/usr/lib/rpc-scandinavia/rpc-repository/RpcRepositoryPamNss.so"  "/usr/lib/libnss_rpc-repository.so.2"
+sudo  ln  --symbolic  --relative  --force  "/usr/lib/rpc-scandinavia/rpc-repository/RpcRepositoryPamNss.so"  "/usr/lib/security/pam_rpc-repository.so"
+
+# Typical on Debian systems:
+sudo  ln  --symbolic  --relative  --force  "/usr/lib/rpc-scandinavia/rpc-repository/RpcRepositoryPamNss.so"  "/usr/lib/x86_64-linux-gnu/libnss_rpc-repository.so.2"
+sudo  ln  --symbolic  --relative  --force  "/usr/lib/rpc-scandinavia/rpc-repository/RpcRepositoryPamNss.so"  "/usr/lib/x86_64-linux-gnu/security/pam_rpc-repository.so"
+```
+
 ### Permissions
 
 The following SystemD services are in play during sign-in (on my KDE Linux system):
