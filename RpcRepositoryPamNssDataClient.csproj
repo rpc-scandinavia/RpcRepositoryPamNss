@@ -1,0 +1,82 @@
+<Project>
+	<PropertyGroup>
+    	<!-- Native AOT executable. -->
+		<TargetFramework>net10.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+		<Nullable>disable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<RootNamespace>RpcScandinavia.Repository.PamNss.DataClient</RootNamespace>
+
+		<!-- Enable Native AOT and Shared Library output. -->
+		<PublishAot>true</PublishAot>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<!-- ExportsFile>$(MSBuildProjectDirectory)/obj/module.exports</ExportsFile -->
+
+		<!-- Move the "bin" folder. -->
+		<OutDir>bin-dataclient/</OutDir>
+		<OutputPath>$(OutDir)</OutputPath>
+
+		<!-- Project details. -->
+
+		<!-- Project version. -->
+
+		<!-- Move the "obj" folder. -->
+		<BaseIntermediateOutputPath>obj-dataclient/</BaseIntermediateOutputPath>
+	</PropertyGroup>
+
+	<!-- Import SDK properties here, when moving the "obj" folder. -->
+	<Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+	<ItemGroup>
+		<!-- Only use files in the "DataClient" directory, and specific files. -->
+		<Content Remove="**" />
+		<Compile Remove="**" />
+		<Compile Include="DataClient/**" />
+		<Compile Include="Module\NssStructs.cs" />
+		<Compile Include="Module/NssException.cs" />
+		<Compile Include="ModuleImplementation/Configuration.cs" />
+		<Compile Include="ModuleImplementation/ClientDataMapperExtensions.cs" />
+		<Compile Include="ModuleImplementation/DataSerializer.cs" />
+		<Compile Include="ModuleImplementation/DataClient.cs" />
+		<Compile Include="ModuleImplementation/PrefixLogger.cs" />
+
+		<!-- Package References: Miscellanious -->
+		<PackageReference Include="System.Linq.Async" Version="7.*" />
+
+		<!-- Package References: gRPC -->
+		<PackageReference Include="Google.Protobuf" Version="3.*" />
+		<PackageReference Include="Grpc.Tools" Version="2.*" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.*" />
+
+		<!-- Source Generator: gRPC protobuf. -->
+		<Protobuf Include="..\RpcRepository\Client\Protos\LinuxNSS.proto">
+			<GrpcServices>Both</GrpcServices>
+			<Generator>MSBuild:Compile</Generator>
+		</Protobuf>
+		<Protobuf Include="..\RpcRepository\Client\Protos\LinuxPAM.proto">
+			<GrpcServices>Both</GrpcServices>
+			<Generator>MSBuild:Compile</Generator>
+		</Protobuf>
+	</ItemGroup>
+
+	<Target Name="PostBuildPublishCopy" AfterTargets="Publish">
+		<Copy
+			SourceFiles="$(PublishDir)$(ProjectName)"
+			DestinationFiles="$(MSBuildProjectDirectory)\$(ProjectName)"
+		/>
+
+		<!--
+		<Copy
+			SourceFiles="$(PublishDir)$(ProjectName)"
+			DestinationFiles="/data/setup/temp/$(ProjectName)"
+		/>
+		-->
+		<Copy
+			SourceFiles="$(PublishDir)$(ProjectName)"
+			DestinationFiles="/data/setup/linux/bincs.extensions/sources/rpc-repository-pam-nss-TEST/usr/lib/rpc-scandinavia/rpc-repository/$(ProjectName)"
+		/>
+    </Target>
+
+	<!-- Import SDK targets last, when moving the "obj" folder. -->
+	<Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

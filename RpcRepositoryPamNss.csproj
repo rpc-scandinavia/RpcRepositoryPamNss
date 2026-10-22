@@ -1,0 +1,134 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+    	<!-- Native AOT library. -->
+		<TargetFramework>net10.0</TargetFramework>
+		<OutputType>Library</OutputType>
+		<Nullable>disable</Nullable>
+		<LangVersion>latest</LangVersion>
+        <RootNamespace>RpcScandinavia.Repository.PamNss</RootNamespace>
+
+		<!-- Disable warnings. -->
+        <NoWarn>$(NoWarn);IL3000</NoWarn>					<!-- 'System.Reflection.Assembly.Location' always returns an empty string for assemblies embedded in a single-file app. If the path to the app directory is needed, consider calling 'System.AppContext.BaseDirectory'. -->
+		<NoWarn>$(NoWarn);NU1608</NoWarn>					<!-- Detected package version outside of dependency constraint: Microsoft.CodeAnalysis.Workspaces.MSBuild 4.8.0 requires Microsoft.CodeAnalysis.Common (= 4.8.0) but version Microsoft.CodeAnalysis.Common 4.11.0 was resolved. -->
+		<NoWarn>$(NoWarn);CA1416</NoWarn>					<!-- This call site is reachable on all platforms. 'FileSystemInfo.UnixFileMode.set' is unsupported on: 'windows' -->
+
+		<!-- Enable Native AOT and Shared Library output. -->
+		<PublishAot>true</PublishAot>
+		<NativeLib>Shared</NativeLib>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ExportsFile>$(MSBuildProjectDirectory)/obj/module.exports</ExportsFile>
+
+		<!-- Project details. -->
+        <Title>RPC Repository</Title>
+        <Product>RPC Repository</Product>
+        <Description>RPC Repository is a storage hosting users and groups.</Description>
+        <Copyright>Copyright © RPC Scandinavia 2026 - $([System.DateTime]::UtcNow.ToString(yyyy))</Copyright>
+		<Authors>René Paw Christensen</Authors>
+		<Company>RPC Scandinavia\r\nGartnerengen 21, Fjellerup\r\nDK 085 85  Glæsborg\r\nScandinavia\r\n\r\nhttp://rpc-scandinavia.dk\r\ninfo@rpc-scandinavia.dk</Company>
+
+		<!-- Project version. -->
+		<VersionSuffix>10.0.$([System.DateTime]::UtcNow.ToString(yy))$([System.DateTime]::UtcNow.DayOfYear.ToString(000))</VersionSuffix>
+		<Version>$(VersionSuffix)</Version>
+		<FileVersion>$(VersionSuffix)</FileVersion>
+		<AssemblyVersion>$(VersionSuffix)</AssemblyVersion>
+		<InformationalVersion>$(VersionSuffix) | $([System.DateTime]::UtcNow.ToString(yyyy))</InformationalVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+		<!-- Only use files in the "Module" and "ModuleImplementation" directory. -->
+		<Content Remove="**" />
+		<Compile Remove="**" />
+		<Compile Include="Module/**" />
+		<Compile Include="ModuleImplementation/**" />
+
+		<!-- Package References: Miscellanious. -->
+    	<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.*" />
+
+		<!-- Package References: System bus -->
+		<PackageReference Include="Tmds.DBus.Protocol" Version="0.*" />
+
+		<!-- Package References: gRPC -->
+		<PackageReference Include="Google.Protobuf" Version="3.*" />
+		<PackageReference Include="Grpc.Tools" Version="2.*" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.*" />
+
+		<!-- Source Generator: gRPC protobuf. -->
+		<Protobuf Include="..\RpcRepository\Client\Protos\LinuxNSS.proto">
+		  <GrpcServices>Both</GrpcServices>
+		  <Generator>MSBuild:Compile</Generator>
+		</Protobuf>
+		<Protobuf Include="..\RpcRepository\Client\Protos\LinuxPAM.proto">
+		  <GrpcServices>Both</GrpcServices>
+		  <Generator>MSBuild:Compile</Generator>
+		</Protobuf>
+	</ItemGroup>
+
+    <!--
+    Configure the source generator that generates the native exported methods, with the correct EntryPoint and that
+    call the configured implementing class.
+    -->
+	<PropertyGroup>
+		<PamProviderClass>RpcRepositoryPamProvider</PamProviderClass>
+		<NssProviderClass>RpcRepositoryNssProvider</NssProviderClass>
+		<NssServiceName>rpc-repository</NssServiceName>
+
+		<!--
+		<PamProviderClass>TestPamProvider</PamProviderClass>
+		<NssProviderClass>TestNssProvider</NssProviderClass>
+		<NssServiceName>rpc-repository</NssServiceName>
+		-->
+
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\Generated</CompilerGeneratedFilesOutputPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<CompilerVisibleProperty Include="PamProviderClass" />
+		<CompilerVisibleProperty Include="NssProviderClass" />
+		<CompilerVisibleProperty Include="NssServiceName" />
+		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+
+		<ProjectReference
+			Include="RpcRepositoryPamNssNativeExportsGenerator.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false"
+		/>
+	</ItemGroup>
+
+	<Target Name="PostBuildPublishCopy" AfterTargets="Publish">
+		<!--
+		<Copy
+			SourceFiles="$(PublishDir)$(ProjectName).so"
+			DestinationFiles="$(MSBuildProjectDirectory)\libnss_$(NssServiceName).so.2"
+		/>
+		<Copy
+			SourceFiles="$(PublishDir)$(ProjectName).so"
+			DestinationFiles="$(MSBuildProjectDirectory)\pam_$(NssServiceName).so"
+		/>
+		-->
+
+		<Copy
+			SourceFiles="$(PublishDir)$(ProjectName).so"
+			DestinationFiles="/data/setup/linux/bincs.extensions/sources/rpc-repository-pam-nss-TEST/usr/lib/rpc-scandinavia/rpc-repository/$(ProjectName).so"
+		/>
+    </Target>
+
+	<!--
+	ILC always writes the ".exports" file itself, and wraps every symbol in a V1.0 { ... } version node.
+	-->
+	<Target
+		Name="RemoveSymbolVersions"
+		AfterTargets="IlcCompile"
+		BeforeTargets="LinkNative"
+		Condition="'$(ExportsFile)' != '' and Exists('$(ExportsFile)')"
+	>
+		<Message Importance="high" Text="Stripping version node from exports file: $(ExportsFile)" />
+
+  		<!-- Rewrite V1.0 {  →  { -->
+		<Exec Command="sed -i 's/^V1\.0[[:space:]]*{/{/' &quot;$(ExportsFile)&quot;" />
+
+		<!-- Sanity check -->
+		<Exec Command="head -n 5 &quot;$(ExportsFile)&quot;" />
+	</Target>
+
+</Project>
