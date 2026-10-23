@@ -234,6 +234,7 @@ Example `/usr/lib/systemd/system/polkit.service.d/80-rpc-repository.conf`:
 DevicePolicy            = closed
 MemoryMax               = 192M
 MemorySwapMax           = 192M
+SystemCallFilter        =
 
 # Enable networking and IP socket families.
 PrivateNetwork          = false

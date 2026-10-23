@@ -242,6 +242,7 @@ public class Configuration {
 	public String[] Tenants {
 		get {
 			if (this.options.TryGetValue(Configuration.KeyTenants, out String value) == true) {
+				// Currently only one tenant is supported.
 				return [value];
 			} else {
 				return Configuration.DefaultTenants;
